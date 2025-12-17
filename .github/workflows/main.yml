@@ -99,23 +99,23 @@ jobs:
     needs: docker-build-smoke
     defaults:
       run:
-        shell: bas
+        shell: bash
     steps:
      - name: Docker push to JFrog (simple)
        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
        run: |
-          set -e
-      
-          REGISTRY="trial29e6cp.jfrog.io"
-          REPO="docker-trial"
-          IMAGE="devops-tech-challenge-app"
-          TAG="docker-${SHORT_SHA}"
-      
-          docker login "$REGISTRY" \
+        set -e
+    
+        REGISTRY="trial29e6cp.jfrog.io"
+        REPO="docker-trial"
+        IMAGE="devops-tech-challenge-app"
+        TAG="docker-${SHORT_SHA}"
+    
+        docker login "$REGISTRY" \
             -u "${{ secrets.JFROG_USERNAME }}" \
             -p "${{ secrets.JFROG_TOKEN }}"
-      
-          docker tag "$IMAGE:ci" "$REGISTRY/$REPO/$IMAGE:$TAG"
-          docker push "$REGISTRY/$REPO/$IMAGE:$TAG"
+    
+        docker tag "$IMAGE:ci" "$REGISTRY/$REPO/$IMAGE:$TAG"
+        docker push "$REGISTRY/$REPO/$IMAGE:$TAG"
       
     
