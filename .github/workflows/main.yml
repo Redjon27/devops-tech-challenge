@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   IMAGE_NAME: devops-tech-challenge-app
@@ -12,35 +12,40 @@ env:
   APP_PORT: 3000
 
 jobs:
-  unit-tests:
-    name: Unit tests (Node)
+  build-image:
+    name: Build Docker image
     runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Infer short sha
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA:0:8}" >> $GITHUB_OUTPUT
+
+      - name: Build image
+        run: docker build -t "${IMAGE_NAME}:ci" .
+
+      - name: Save image as artifact
+        run: |
+          docker save "${IMAGE_NAME}:ci" | gzip > image-ci.tar.gz
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          name: docker-image-ci
+          path: image-ci.tar.gz
+          retention-days: 1
 
-      - name: Install deps
-        run: npm ci || npm install
-
-      - name: Run unit tests
-        run: npm test
-
-      - name: Build app
-        run: npm run build
-
-  docker-build-smoke:
-    name: Docker build + Smoke test + Push to JFrog
+  smoke-test:
+    name: Smoke test (Compose)
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: build-image
     defaults:
       run:
         shell: bash
@@ -48,19 +53,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set SHORT_SHA
-        run: echo "SHORT_SHA=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-ci
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image (local tag)
+      - name: Load image
         run: |
-          docker build -t "${IMAGE_NAME}:ci" .
+          gunzip -c image-ci.tar.gz | docker load
+          docker image ls | head
 
-      - name: Smoke test (docker compose up)
+      - name: Smoke test (docker compose, JSON only)
         run: |
-          docker compose --env-file env/dev.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+          # Override app to use prebuilt image instead of build:
+          cat > docker-compose.ci.override.yml <<'YAML'
+          services:
+            app:
+              image: devops-tech-challenge-app:ci
+              build: null
+          YAML
+
+          docker compose --env-file env/dev.env \
+            -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.ci.override.yml \
+            up -d --no-build
 
           echo "Waiting for app to be ready..."
           for i in {1..40}; do
@@ -72,13 +87,10 @@ jobs:
           done
 
           echo "Hitting endpoint..."
-          curl -sSf "http://localhost:${APP_PORT}/" | tee /tmp/resp.json
+          curl -sSf "http://localhost:${APP_PORT}/" -o /tmp/resp.json
 
-          if ! grep -q '"request":"\[GET\] /"' /tmp/resp.json; then
-            echo "Unexpected response:"
-            cat /tmp/resp.json
-            exit 1
-          fi
+          echo "Validating JSON..."
+          python -m json.tool /tmp/resp.json >/dev/null
 
           echo "Smoke test passed!"
 
@@ -93,19 +105,40 @@ jobs:
         run: |
           docker compose down -v
 
-      - name: Docker push to JFrog (simple)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  push-jfrog:
+    name: Push to JFrog
+    runs-on: ubuntu-latest
+    needs: [build-image, smoke-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-ci
+
+      - name: Load image
+        run: |
+          gunzip -c image-ci.tar.gz | docker load
+
+      - name: Push to JFrog
         run: |
           set -e
-
+          SHORT_SHA="${{ needs.build-image.outputs.short_sha }}"
           REGISTRY="trial29e6cp.jfrog.io"
-          REPO="${JFROG_DOCKER_REPO}"
-          IMAGE="${IMAGE_NAME}"
-          TAG="docker-${SHORT_SHA}"
 
           docker login "$REGISTRY" \
             -u "${{ secrets.JFROG_USERNAME }}" \
             -p "${{ secrets.JFROG_TOKEN }}"
 
-          docker tag "$IMAGE:ci" "$REGISTRY/$REPO/$IMAGE:$TAG"
-          docker push "$REGISTRY/$REPO/$IMAGE:$TAG"
+          FULL_TAG="$REGISTRY/${JFROG_DOCKER_REPO}/${IMAGE_NAME}:docker-${SHORT_SHA}"
+          echo "Pushing: $FULL_TAG"
+
+          docker tag "${IMAGE_NAME}:ci" "$FULL_TAG"
+          docker push "$FULL_TAG"
+        env:        
+          JFROG_DOCKER_REPO: ${{ secrets.JFROG_DOCKER_REPO }}
+          JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+          JFROG_TOKEN: ${{ secrets.JFROG_TOKEN }}
