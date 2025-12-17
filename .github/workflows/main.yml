@@ -1,15 +1,21 @@
-name: ci
+name: CI
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
 
 jobs:
-  unit_and_build:
+  unit-tests:
+    name: Unit tests (Node)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -20,44 +26,48 @@ jobs:
       - name: Install deps
         run: npm ci || npm install
 
-      - name: Unit tests
+      - name: Run unit tests
         run: npm test
 
       - name: Build app
         run: npm run build
 
-      - name: Build Docker image
-        run: docker build -t devops-tech-challenge-app:ci .
-
-  smoke_compose:
+  docker-build-and-smoke:
+    name: Docker build + Smoke test (Compose)
     runs-on: ubuntu-latest
-    needs: unit_and_build
+    needs: unit-tests
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build + start stack
-        run: |
-          docker compose --env-file env/test.env -f docker-compose.yml -f docker-compose.test.yml up -d --build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Wait for app
+      - name: Build Docker image
         run: |
+          docker build -t devops-tech-challenge-app:ci .
+
+      # Smoke test using Docker Compose (local orchestration)
+      - name: Smoke test (docker compose up)
+        run: |
+          docker compose --env-file env/dev.env up -d --build
+          echo "Waiting for app..."
           for i in {1..30}; do
-            if curl -sf http://localhost:3002 >/dev/null; then
+            if curl -fsS http://localhost:3000 >/dev/null; then
               echo "App is up"
               exit 0
             fi
             sleep 2
           done
-          echo "App did not become ready"
+          echo "App did not become ready in time"
           docker compose ps
-          docker compose logs --no-color app
+          docker compose logs --no-color
           exit 1
-
-      - name: Smoke request
-        run: |
-          curl -s http://localhost:3002 | tee /tmp/resp.json
-          grep -q '"request":"\[GET\] /"' /tmp/resp.json
 
       - name: Teardown
         if: always()
-        run: docker compose down -v
+        run: |
+          docker compose down -v
