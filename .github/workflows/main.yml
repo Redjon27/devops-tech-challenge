@@ -8,7 +8,6 @@ on:
 
 env:
   IMAGE_NAME: devops-tech-challenge-app
-  JFROG_DOCKER_REPO: docker-trial
   APP_PORT: 3000
 
 jobs:
@@ -128,17 +127,14 @@ jobs:
           set -e
           SHORT_SHA="${{ needs.build-image.outputs.short_sha }}"
           REGISTRY="trial29e6cp.jfrog.io"
+          REPO="docker-trial"
+          IMAGE="devops-tech-challenge-app"
 
-          docker login "$REGISTRY" \
-            -u "${{ secrets.JFROG_USERNAME }}" \
-            -p "${{ secrets.JFROG_TOKEN }}"
+          echo "${{ secrets.JFROG_TOKEN }}" | docker login "$REGISTRY" \
+            -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
 
-          FULL_TAG="$REGISTRY/${JFROG_DOCKER_REPO}/${IMAGE_NAME}:docker-${SHORT_SHA}"
+          FULL_TAG="$REGISTRY/$REPO/$IMAGE:docker-${SHORT_SHA}"
           echo "Pushing: $FULL_TAG"
 
-          docker tag "${IMAGE_NAME}:ci" "$FULL_TAG"
+          docker tag "$IMAGE:ci" "$FULL_TAG"
           docker push "$FULL_TAG"
-        env:        
-          JFROG_DOCKER_REPO: ${{ secrets.JFROG_DOCKER_REPO }}
-          JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
-          JFROG_TOKEN: ${{ secrets.JFROG_TOKEN }}
