@@ -1,0 +1,14 @@
+services:
+  app:
+    environment:
+      NODE_ENV: prod
+    ports:
+      - "3001:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+volumes:  
+  mongo_data:
+    name: "mongo_data_prod"
