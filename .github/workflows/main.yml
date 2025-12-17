@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  IMAGE_NAME: devops-tech-challenge-app
+  JFROG_DOCKER_REPO: docker-trial
+  APP_PORT: 3000
+
 jobs:
   unit-tests:
     name: Unit tests (Node)
@@ -32,8 +37,8 @@ jobs:
       - name: Build app
         run: npm run build
 
-  docker-build-and-smoke:
-    name: Docker build + Smoke test (Compose)
+  docker-build-smoke-and-push:
+    name: Docker build + Smoke test + Push to JFrog
     runs-on: ubuntu-latest
     needs: unit-tests
     defaults:
@@ -43,37 +48,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set SHORT_SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build Docker image (local tag)
         run: |
-          docker build -t devops-tech-challenge-app:ci .
+          docker build -t "${IMAGE_NAME}:ci" .
 
-      # Smoke test using Docker Compose (local orchestration)
       - name: Smoke test (docker compose up)
         run: |
-            docker compose --env-file env/dev.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
-        
-            echo "Waiting for app to be ready..."
-            for i in {1..40}; do
-            if curl -sSf http://localhost:3000/ >/dev/null; then
-                echo "App is responding."
-                break
+          docker compose --env-file env/dev.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+          echo "Waiting for app to be ready..."
+          for i in {1..40}; do
+            if curl -sSf "http://localhost:${APP_PORT}/" >/dev/null; then
+              echo "App is responding."
+              break
             fi
             sleep 3
-            done
-        
-            echo "Hitting endpoint..."
-            curl -sSf http://localhost:3000/ | tee /tmp/resp.json
-        
-            if ! grep -q '"request":"\[GET\] /"' /tmp/resp.json; then
+          done
+
+          echo "Hitting endpoint..."
+          curl -sSf "http://localhost:${APP_PORT}/" | tee /tmp/resp.json
+
+          if ! grep -q '"request":"\[GET\] /"' /tmp/resp.json; then
             echo "Unexpected response:"
             cat /tmp/resp.json
             exit 1
-            fi
-        
-            echo "Smoke test passed!"
+          fi
+
+          echo "Smoke test passed!"
 
       - name: Show logs on failure
         if: failure()
@@ -85,3 +92,18 @@ jobs:
         if: always()
         run: |
           docker compose down -v
+
+      # ✅ JFrog step më vete (vetëm në push në main)
+      - name: Push image to JFrog (docker-${SHORT_SHA})
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+
+          echo "${{ secrets.JFROG_TOKEN }}" | docker login "${{ secrets.JFROG_URL }}" \
+            -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
+
+          FULL_TAG="${{ secrets.JFROG_URL }}/${JFROG_DOCKER_REPO}/${IMAGE_NAME}:docker-${SHORT_SHA}"
+          echo "Pushing: $FULL_TAG"
+
+          docker tag "${IMAGE_NAME}:ci" "$FULL_TAG"
+          docker push "$FULL_TAG"
