@@ -53,21 +53,35 @@ jobs:
       # Smoke test using Docker Compose (local orchestration)
       - name: Smoke test (docker compose up)
         run: |
-          docker compose --env-file env/dev.env up -d --build
-          echo "Waiting for app..."
-          for i in {1..30}; do
-            if curl -fsS http://localhost:3000 >/dev/null; then
-              echo "App is up"
-              exit 0
+            docker compose --env-file env/dev.env -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+
+            echo "Waiting for app health..."
+            for i in {1..40}; do
+                STATUS="$(docker inspect --format='{{.State.Health.Status}}' devops-tech-challenge-app-1 2>/dev/null || true)"
+                echo "app health: $STATUS"
+                if [ "$STATUS" = "healthy" ]; then
+                break
+                fi
+                sleep 3
+            done
+
+            echo "Hitting endpoint..."
+            curl -sSf http://localhost:3000/ | tee /tmp/resp.json
+
+            if ! grep -q '"status":"ok"' /tmp/resp.json; then
+                echo "Unexpected response:"
+                cat /tmp/resp.json
+                exit 1
             fi
-            sleep 2
-          done
-          echo "App did not become ready in time"
+            echo "Smoke test passed!"
+            
+      - name: Show logs on failure
+        if: failure()
+        run: |
           docker compose ps
           docker compose logs --no-color
-          exit 1
 
-      - name: Teardown
+      - name: Cleanup
         if: always()
         run: |
           docker compose down -v
