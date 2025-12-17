@@ -101,24 +101,21 @@ jobs:
       run:
         shell: bas
     steps:
-      - name: Push image to JFrog
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-            set -euo pipefail
-        
-            # Sanitize JFROG_URL (remove newlines/spaces, https://, and any /path)
-            REGISTRY_RAW="${{ secrets.JFROG_URL }}"
-            REGISTRY="$(printf "%s" "$REGISTRY_RAW" | tr -d '\r\n' | xargs)"
-            REGISTRY="${REGISTRY#http://}"
-            REGISTRY="${REGISTRY#https://}"
-            REGISTRY="${REGISTRY%%/*}"
-        
-            echo "${{ secrets.JFROG_TOKEN }}" | docker login "$REGISTRY" \
-            -u "${{ secrets.JFROG_USERNAME }}" --password-stdin
-        
-            FULL_TAG="$REGISTRY/${JFROG_DOCKER_REPO}/${IMAGE_NAME}:docker-${SHORT_SHA}"
-            echo "Pushing: $FULL_TAG"
-        
-            docker tag "${IMAGE_NAME}:ci" "$FULL_TAG"
-            docker push "$FULL_TAG"
+     - name: Docker push to JFrog (simple)
+       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+       run: |
+          set -e
+      
+          REGISTRY="trial29e6cp.jfrog.io"
+          REPO="docker-trial"
+          IMAGE="devops-tech-challenge-app"
+          TAG="docker-${SHORT_SHA}"
+      
+          docker login "$REGISTRY" \
+            -u "${{ secrets.JFROG_USERNAME }}" \
+            -p "${{ secrets.JFROG_TOKEN }}"
+      
+          docker tag "$IMAGE:ci" "$REGISTRY/$REPO/$IMAGE:$TAG"
+          docker push "$REGISTRY/$REPO/$IMAGE:$TAG"
+      
     
