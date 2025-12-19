@@ -6,7 +6,7 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: git@github.com:ORG/REPO.git
+    repoURL: git@github.com:Redjon27/devops-tech-challenge.git
     targetRevision: main
     path: helm/visits-app
   destination:
