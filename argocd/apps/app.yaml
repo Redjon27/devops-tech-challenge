@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: visits-app
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: git@github.com:ORG/REPO.git
+    targetRevision: main
+    path: helm/visits-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: visits
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
