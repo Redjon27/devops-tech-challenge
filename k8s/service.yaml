@@ -4,11 +4,9 @@ metadata:
   name: service-devops-tech-challenge
   namespace: dev
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: devops-tech-challenge
   ports:
     - port: 80
       targetPort: 3000
-      nodePort: 30080
-
