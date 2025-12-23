@@ -5,7 +5,8 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-
+permissions:
+  contents: write
 env:
   IMAGE_NAME: devops-tech-challenge-app
   APP_PORT: 3000
@@ -143,17 +144,24 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+
+      - name: Checkout repo (for manifest update)
+        uses: actions/checkout@v4
+        with:
+            ref: main
+            fetch-depth: 0
   
       - name: Update deployment image tag
         run: |
-            SHORT_SHA="${{ needs.build-image.outputs.short_sha }}"
-            sed -i "s/docker-REPLACE_ME/docker-${SHORT_SHA}/g" k8s/deployment.yaml
-            git diff -- k8s/deployment.yaml
-  
+          SHORT_SHA="${{ needs.build-image.outputs.short_sha }}"
+          sed -i "s/docker-REPLACE_ME/docker-${SHORT_SHA}/g" k8s/deployment.yaml
+          git diff -- k8s/deployment.yaml
+    
       - name: Commit and push manifest change
         run: |
-            git config user.name "github-actions"
-            git config user.email "github-actions@users.noreply.github.com"
-            git add k8s/deployment.yaml
-            git commit -m "chore(deploy): update image tag to docker-${{ needs.build-image.outputs.short_sha }}" || exit 0
-            git push
+          set -e
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add k8s/deployment.yaml
+          git commit -m "chore(deploy): update image tag to docker-${{ needs.build-image.outputs.short_sha }}" || exit 0
+          git push origin HEAD:main
