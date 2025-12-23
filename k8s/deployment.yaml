@@ -28,21 +28,30 @@ spec:
             - name: MONGODB_URI
               value: "mongodb://root:rootpass@mongo:27017/visitsdb_dev?authSource=admin"
 
+          # Give the app time to start (and DB/DNS to be ready) before liveness kicks in
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 45  # ~90s max startup time
+
           readinessProbe:
             httpGet:
               path: /
               port: 3000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 2
-            failureThreshold: 6
+            failureThreshold: 12
             successThreshold: 1
 
           livenessProbe:
             httpGet:
               path: /
               port: 3000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 6
