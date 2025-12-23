@@ -20,3 +20,21 @@ spec:
           image: trial29e6cp.jfrog.io/docker-trial/devops-tech-challenge-app:docker-452742d9
           ports:
             - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "development"
+            - name: MONGO_DB
+              value: "visitsdb_dev"
+            - name: MONGODB_URI
+              value: "mongodb://root:rootpass@mongo:27017/visitsdb_dev?authSource=admin"
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+            successThreshold: 1
+          livenessProbe:
