@@ -1,6 +1,6 @@
 app:
   image:
-    tag: "docker-93af3baf"
+    tag: "docker-d6a3f560"
   env:
     NODE_ENV: "development"
     MONGO_DB: "visitsdb_dev"
