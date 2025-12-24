@@ -21,4 +21,3 @@ jobs:
       JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
       JFROG_TOKEN: ${{ secrets.JFROG_TOKEN }}
       GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
-
