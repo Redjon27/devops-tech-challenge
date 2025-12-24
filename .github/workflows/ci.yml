@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  run:
+    uses: Redjon27/platform-cicd-workflows/.github/workflows/build-test-push-deploy.yml@main
+    with:
+      image_name: devops-tech-challenge-app
+      jfrog_registry: trial29e6cp.jfrog.io
+      jfrog_docker_repo: docker-trial
+      gitops_repo: Redjon27/deployment-aplications
+      gitops_values_dev_path: environments/dev/devops-tech-challenge.values.yaml
+      gitops_values_test_path: environments/test/devops-tech-challenge.values.yaml
+      app_port: 3000
+    secrets:
+      JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
+      JFROG_TOKEN: ${{ secrets.JFROG_TOKEN }}
+      GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+
