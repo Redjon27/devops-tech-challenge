@@ -15,7 +15,6 @@ jobs:
       jfrog_docker_repo: docker-trial
       gitops_repo: Redjon27/deployment-aplications
       gitops_values_dev_path: environments/dev/devops-tech-challenge.values.yaml
-      gitops_values_test_path: environments/test/devops-tech-challenge.values.yaml
       app_port: 3000
     secrets:
       JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
