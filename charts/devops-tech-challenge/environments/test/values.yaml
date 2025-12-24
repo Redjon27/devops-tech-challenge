@@ -1,4 +1,6 @@
 app:
+  image:
+    tag: "docker-22bf120a"
   env:
     NODE_ENV: "test"
     MONGO_DB: "visitsdb_test"
