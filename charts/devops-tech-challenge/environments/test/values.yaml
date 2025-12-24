@@ -12,4 +12,4 @@ mongo:
 ingress:
   enabled: true
   className: nginx
-  host: "test.devops-tech-challenge.local"
+  host: "test.3.123.115.73.nip.io"
