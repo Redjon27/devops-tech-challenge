@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dtc.fullname" . }}
+  labels:
+    {{- include "dtc.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "dtc.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "dtc.fullname" . }}
+        {{- include "dtc.labels" . | nindent 8 }}
+    spec:
+      {{- if .Values.app.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.app.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      containers:
+        - name: app
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.app.containerPort }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.app.env.NODE_ENV | quote }}
+            - name: MONGO_DB
+              value: {{ .Values.app.env.MONGO_DB | quote }}
+            - name: MONGODB_URI
+              value: {{ .Values.app.env.MONGODB_URI | quote }}
+
+          startupProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.app.containerPort }}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 45
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.app.containerPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 12
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.app.containerPort }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 6

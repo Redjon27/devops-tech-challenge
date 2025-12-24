@@ -1,0 +1,13 @@
+app:
+  env:
+    NODE_ENV: "development"
+    MONGO_DB: "visitsdb_dev"
+    MONGODB_URI: "mongodb://root:rootpass@mongo:27017/visitsdb_dev?authSource=admin"
+
+mongo:
+  database: "visitsdb_dev"
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
