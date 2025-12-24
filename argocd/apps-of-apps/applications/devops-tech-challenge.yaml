@@ -1,17 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: api
+  name: devops-tech-challenge
   namespace: argocd
 spec:
-  project: platform
+  project: default
   source:
     repoURL: git@github.com:Redjon27/devops-tech-challenge.git
     targetRevision: main
     path: k8s
   destination:
     server: https://kubernetes.default.svc
-    namespace: api
+    namespace: dev
   syncPolicy:
     automated:
       prune: true
