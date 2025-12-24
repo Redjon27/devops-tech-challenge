@@ -17,7 +17,7 @@ spec:
         - name: jfrog-regcred
       containers:
         - name: app
-          image: trial29e6cp.jfrog.io/docker-trial/devops-tech-challenge-app:docker-da46cd47
+          image: trial29e6cp.jfrog.io/docker-trial/devops-tech-challenge-app:docker-4b308eb5
           ports:
             - containerPort: 3000
           env:
