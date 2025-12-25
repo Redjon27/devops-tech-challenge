@@ -14,7 +14,7 @@ jobs:
       jfrog_registry: trial29e6cp.jfrog.io
       jfrog_docker_repo: docker-trial
       gitops_repo: Redjon27/deployment-aplications
-      gitops_values_dev_path: charts/devops-tech-challenge-wrapper/environments/dev/values.yaml
+      gitops_values_dev_path: devops-tech-challenge/values.dev.yaml
       app_port: 3000
     secrets:
       JFROG_USERNAME: ${{ secrets.JFROG_USERNAME }}
