@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { VisitsModule } from './visits/visits.module';
+import { MetricsModule } from './metrics/metrics.module';
 
 @Module({
   imports: [
