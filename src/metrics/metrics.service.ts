@@ -1,43 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as client from 'prom-client';
 
 @Injectable()
-export class MetricsService {
-  private readonly registry: client.Registry;
-  private readonly httpDuration: client.Histogram<string>;
-  private readonly httpRequestsTotal: client.Counter<string>;
+export class MetricsService implements OnModuleInit {
+  private readonly registry = new client.Registry();
 
-  constructor() {
-    this.registry = new client.Registry();
+  // HTTP metrics
+  public readonly httpRequestDuration = new client.Histogram({
+    name: 'http_request_duration_seconds',
+    help: 'HTTP request duration in seconds',
+    labelNames: ['method', 'route', 'status_code'] as const,
+    buckets: [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
+  });
 
-    // Default metrics (CPU, memory, event loop, etc.)
+  public readonly httpRequestsTotal = new client.Counter({
+    name: 'http_requests_total',
+    help: 'Total number of HTTP requests',
+    labelNames: ['method', 'route', 'status_code'] as const,
+  });
+
+  onModuleInit() {
     client.collectDefaultMetrics({ register: this.registry });
 
-    // Request count (for error rates)
-    this.httpRequestsTotal = new client.Counter({
-      name: 'http_requests_total',
-      help: 'Total number of HTTP requests',
-      labelNames: ['method', 'route', 'status'],
-      registers: [this.registry],
-    });
-
-    // Request latency (for request latency/p95)
-    this.httpDuration = new client.Histogram({
-      name: 'http_request_duration_seconds',
-      help: 'HTTP request duration in seconds',
-      labelNames: ['method', 'route', 'status'],
-      buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
-      registers: [this.registry],
-    });
+    this.registry.registerMetric(this.httpRequestDuration);
+    this.registry.registerMetric(this.httpRequestsTotal);
   }
 
-  getRegistry() {
-    return this.registry;
+  async metrics(): Promise<string> {
+    return this.registry.metrics();
   }
 
-  observeHttp(method: string, route: string, status: number, durationSeconds: number) {
-    const statusStr = String(status);
-    this.httpRequestsTotal.labels(method, route, statusStr).inc();
-    this.httpDuration.labels(method, route, statusStr).observe(durationSeconds);
+  contentType(): string {
+    return this.registry.contentType;
   }
 }

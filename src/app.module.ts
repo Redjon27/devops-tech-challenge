@@ -1,25 +1,12 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
-import { AppController } from './app.controller';
-import { VisitsModule } from './visits/visits.module';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { MetricsModule } from './metrics/metrics.module';
+import { MetricsMiddleware } from './metrics/metrics.middleware';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot(),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>(
-          'MONGODB_URI',
-          'mongodb://localhost:27017/tech_challenge',
-        ),
-      }),
-      inject: [ConfigService],
-    }),
-    VisitsModule,
-  ],
-  controllers: [AppController],
+  imports: [MetricsModule],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(MetricsMiddleware).forRoutes('*');
+  }
+}
