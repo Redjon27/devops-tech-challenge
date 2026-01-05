@@ -16,3 +16,19 @@ When accessed (via an HTTP request), the application performs two primary functi
 * [**NestJS**](https://nestjs.com/) (Framework)
 * [**Node.js**](https://nodejs.org/) (Runtime)
 * **Database:** **MongoDB** (NoSQL)
+
+
+
+```
+flowchart TD
+  A[Repo #1: App (NestJS)] -->|workflow_call| 
+  B[Repo #2: CI/CD Workflows]
+  B -->|docker push (tag=sha)| R1[JFrog Docker Registry]
+  B -->|PR/merge: bump image tag| G[Repo #4: GitOps / Platform]
+  G -->|watched| C[ArgoCD App-of-Apps]
+  C -->|helm deploy| K[Kubernetes (EKS)]
+  H[Repo #3: Central Helm Charts] -->|helm package/publish| R2[JFrog Helm Registry]
+  R2 -->|helm pull| C
+  K --> P[Prometheus]
+  P --> F[Grafana]
+```
