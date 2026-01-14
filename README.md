@@ -31,4 +31,7 @@ flowchart TD
   R2 -->|helm pull| C
   K --> P[Prometheus]
   P --> F[Grafana]
+infrastructure as code:
+  1) https://github.com/Redjon27/kubernetes-terraform-module 
+  2) https://github.com/Redjon27/kubernetes-terraform
 ```
